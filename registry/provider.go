@@ -10,19 +10,19 @@ import (
 
 import (
 	log "github.com/AlexStocks/log4go"
-
-	"github.com/AlexStocks/dubbogo/common"
-	"github.com/AlexStocks/dubbogo/registry"
-	"github.com/AlexStocks/dubbogo/version"
 	jerrors "github.com/juju/errors"
 )
 
-const (
-	ProviderRegistryZkClient = "provider zk registry"
+import (
+	"github.com/dubbo/dubbo-go/version"
 )
 
+//////////////////////////////////////////////
+// ZkProviderRegistry
+//////////////////////////////////////////////
+
 const (
-	DEFAULT_REGISTRY_TIMEOUT = 1
+	ProviderRegistryZkClient = "provider zk registry"
 )
 
 type ProviderServiceConfig struct {
@@ -73,29 +73,25 @@ func (c ProviderServiceConfig) ServiceEqual(url *ServiceURL) bool {
 
 type ZkProviderRegistry struct {
 	Options
-	common.ApplicationConfig
-	registry.RegistryConfig                // ZooKeeperServers []string
-	birth                   int64          // time of file birth, seconds since Epoch; 0 if unknown
-	wg                      sync.WaitGroup // wg+done for zk restart
-	done                    chan struct{}
-	sync.Mutex              // lock for client + services
-	client                  *zookeeperClient
-	services                map[string]registry.ServiceConfigIf // service name + protocol -> service config
-	zkPath                  map[string]int                      // key = protocol://ip:port/interface
+	birth      int64          // time of file birth, seconds since Epoch; 0 if unknown
+	wg         sync.WaitGroup // wg+done for zk restart
+	done       chan struct{}
+	sync.Mutex // lock for client + services
+	client     *zookeeperClient
+	services   map[string]ServiceConfigIf // service name + protocol -> service config
+	zkPath     map[string]int             // key = protocol://ip:port/interface
 }
 
-func NewZkProviderRegistry(opts ...registry.Option) (*ZkProviderRegistry, error) {
+func NewZkProviderRegistry(opts ...Option) (*ZkProviderRegistry, error) {
 	r := &ZkProviderRegistry{
-		RegistryConfig:    opts.RegistryConfig,
-		ApplicationConfig: opts.ApplicationConfig,
-		birth:             time.Now().Unix(),
-		done:              make(chan struct{}),
-		services:          make(map[string]registry.ServiceConfigIf),
-		zkPath:            make(map[string]int),
+		birth:    time.Now().Unix(),
+		done:     make(chan struct{}),
+		services: make(map[string]ServiceConfigIf),
+		zkPath:   make(map[string]int),
 	}
 
 	for _, o := range opts {
-		r.Options(&o)
+		o(&r.Options)
 	}
 
 	if r.Name == "" {
@@ -107,7 +103,7 @@ func NewZkProviderRegistry(opts ...registry.Option) (*ZkProviderRegistry, error)
 	if r.RegistryConfig.Timeout == 0 {
 		r.RegistryConfig.Timeout = DEFAULT_REGISTRY_TIMEOUT
 	}
-	err = r.validateZookeeperClient()
+	err := r.validateZookeeperClient()
 	if err != nil {
 		return nil, jerrors.Trace(err)
 	}
@@ -140,11 +136,11 @@ func (r *ZkProviderRegistry) Register(c interface{}) error {
 	var (
 		ok   bool
 		err  error
-		conf registry.ProviderServiceConfig
+		conf ProviderServiceConfig
 	)
 
-	if conf, ok = c.(registry.ProviderServiceConfig); !ok {
-		return jerrors.Errorf("@c{%v} type is not registry.ServiceConfig", c)
+	if conf, ok = c.(ProviderServiceConfig); !ok {
+		return jerrors.Errorf("@c{%v} type is not ServiceConfig", c)
 	}
 
 	// 检验服务是否已经注册过
@@ -171,7 +167,30 @@ func (r *ZkProviderRegistry) Register(c interface{}) error {
 	return nil
 }
 
-func (r *ZkProviderRegistry) register(conf *registry.ProviderServiceConfig) error {
+func (r *ZkProviderRegistry) registerTempZookeeperNode(root string, node string) error {
+	var (
+		err    error
+		zkPath string
+	)
+
+	r.Lock()
+	defer r.Unlock()
+	err = r.client.Create(root)
+	if err != nil {
+		log.Error("zk.Create(root{%s}) = err{%s}", root, jerrors.ErrorStack(err))
+		return jerrors.Trace(err)
+	}
+	zkPath, err = r.client.RegisterTemp(root, node)
+	if err != nil {
+		log.Error("RegisterTempNode(root{%s}, node{%s}) = error{%v}", root, node, jerrors.ErrorStack(err))
+		return jerrors.Annotatef(err, "RegisterTempNode(root{%s}, node{%s})", root, node)
+	}
+	log.Debug("create a zookeeper node:%s", zkPath)
+
+	return nil
+}
+
+func (r *ZkProviderRegistry) register(conf *ProviderServiceConfig) error {
 	var (
 		err        error
 		revision   string
@@ -260,8 +279,8 @@ func (r *ZkProviderRegistry) handleZkRestart() {
 		err       error
 		flag      bool
 		failTimes int
-		confIf    registry.ServiceConfigIf
-		services  []registry.ServiceConfigIf
+		confIf    ServiceConfigIf
+		services  []ServiceConfigIf
 	)
 
 	defer r.wg.Done()
@@ -285,7 +304,7 @@ LOOP:
 				case <-r.done:
 					log.Warn("(ZkProviderRegistry)reconnectZkRegistry goroutine exit now...")
 					break LOOP
-				case <-time.After(common.TimeSecondDuration(failTimes * registry.REGISTRY_CONN_DELAY)): // 防止疯狂重连zk
+				case <-time.After(time.Duration(1e9 * failTimes * REGISTRY_CONN_DELAY)): // 防止疯狂重连zk
 				}
 				err = r.validateZookeeperClient()
 				log.Info("ZkProviderRegistry.validateZookeeperClient(zkAddr{%r}) = error{%#v}",
@@ -300,10 +319,10 @@ LOOP:
 
 					flag = true
 					for _, confIf = range services {
-						err = r.register(confIf.(*registry.ProviderServiceConfig))
+						err = r.register(confIf.(*ProviderServiceConfig))
 						if err != nil {
 							log.Error("(ZkProviderRegistry)register(conf{%#v}) = error{%#v}",
-								confIf.(*registry.ProviderServiceConfig), jerrors.ErrorStack(err))
+								confIf.(*ProviderServiceConfig), jerrors.ErrorStack(err))
 							flag = false
 							break
 						}
