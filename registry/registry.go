@@ -4,6 +4,20 @@ import (
 	"fmt"
 )
 
+import (
+	"github.com/AlexStocks/goext/net"
+)
+
+//////////////////////////////////////////////
+// Registry Interface
+//////////////////////////////////////////////
+
+// for service discovery/registry
+type Registry interface {
+	Register(conf interface{}) error
+	Close()
+}
+
 //////////////////////////////////////////////
 // application config
 //////////////////////////////////////////////
@@ -70,4 +84,14 @@ func (c ServiceConfig) ServiceEqual(url *ServiceURL) bool {
 	}
 
 	return true
+}
+
+type ServerConfig struct {
+	Protocol string `required:"true",default:"dubbo"` // codec string, jsonrpc  etc
+	IP       string
+	Port     int `required:"true"`
+}
+
+func (c *ServerConfig) Address() string {
+	return gxnet.HostAddress(c.IP, c.Port)
 }
