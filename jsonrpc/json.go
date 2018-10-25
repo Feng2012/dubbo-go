@@ -40,10 +40,6 @@ const (
 	VERSION        = "2.0"
 )
 
-//////////////////////////////////////////
-// json codec
-//////////////////////////////////////////
-
 type CodecData struct {
 	ID     int64
 	Method string
@@ -51,7 +47,19 @@ type CodecData struct {
 	Error  string
 }
 
-// response Error
+const (
+	// Errors defined in the JSON-RPC spec. See
+	// http://www.jsonrpc.org/specification#error_object.
+	CodeParseError       = -32700
+	CodeInvalidRequest   = -32600
+	CodeMethodNotFound   = -32601
+	CodeInvalidParams    = -32602
+	CodeInternalError    = -32603
+	codeServerErrorStart = -32099
+	codeServerErrorEnd   = -32000
+)
+
+// rsponse Error
 type Error struct {
 	Code    int         `json:"code"`
 	Message string      `json:"message"`
@@ -69,6 +77,10 @@ func (e *Error) Error() string {
 	}
 	return string(buf)
 }
+
+//////////////////////////////////////////
+// json client codec
+//////////////////////////////////////////
 
 type clientRequest struct {
 	Version string      `json:"jsonrpc"`
@@ -147,7 +159,7 @@ func (c *jsonClientCodec) Write(d *CodecData) ([]byte, error) {
 	c.req.Method = d.Method
 	c.req.Params = param
 	c.req.ID = d.ID & MAX_JSONRPC_ID
-	// can not use d.ID. otherwise you will get error: can not find method of rsponse id 280698512
+	// can not use d.ID. otherwise you will get error: can not find method of response id 280698512
 	c.pending[c.req.ID] = d.Method
 
 	buf := bytes.NewBuffer(nil)
@@ -187,3 +199,7 @@ func (c *jsonClientCodec) Read(streamBytes []byte, x interface{}) error {
 
 	return jerrors.Trace(json.Unmarshal(*c.rsp.Result, x))
 }
+
+//////////////////////////////////////////
+// json server codec
+//////////////////////////////////////////

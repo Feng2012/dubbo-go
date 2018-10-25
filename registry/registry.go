@@ -23,11 +23,11 @@ type Registry interface {
 //////////////////////////////////////////////
 
 type ApplicationConfig struct {
-	Organization string
-	Name         string
-	Module       string
-	Version      string
-	Owner        string
+	Organization string `yaml:"organization"  json:"organization,omitempty"`
+	Name         string `yaml:"name" json:"name,omitempty"`
+	Module       string `yaml:"module" json:"module,omitempty"`
+	Version      string `yaml:"version" json:"version,omitempty"`
+	Owner        string `yaml:"owner" json:"owner,omitempty"`
 }
 
 func (c *ApplicationConfig) ToString() string {
@@ -36,10 +36,10 @@ func (c *ApplicationConfig) ToString() string {
 }
 
 type RegistryConfig struct {
-	Address  []string `required:"true"`
-	UserName string
-	Password string
-	Timeout  int `default:"5"` // unit: second
+	Address  []string `required:"true" yaml:"address"  json:"address,omitempty"`
+	UserName string   `yaml:"user_name" json:"user_name,omitempty"`
+	Password string   `yaml:"password" json:"password,omitempty"`
+	Timeout  int      `yaml:"timeout" default:"5" json:"timeout,omitempty"` // unit: second
 }
 
 //////////////////////////////////////////////
@@ -52,10 +52,10 @@ type ServiceConfigIf interface {
 }
 
 type ServiceConfig struct {
-	Protocol string `required:"true",default:"dubbo"`
-	Service  string `required:"true"`
-	Group    string
-	Version  string
+	Protocol string `required:"true" ,default:"dubbo"  yaml:"protocol"  json:"protocol,omitempty"`
+	Service  string `required:"true"  yaml:"service"  json:"service,omitempty"`
+	Group    string `yaml:"group" json:"group,omitempty"`
+	Version  string `yaml:"version" json:"version,omitempty"`
 }
 
 func (c ServiceConfig) Key() string {
