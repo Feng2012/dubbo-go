@@ -1,4 +1,4 @@
-# dubbo client toml configure file
+# dubbo client yaml configure file
 
 # pprof
 pprof_enabled : true
@@ -17,7 +17,7 @@ registry : "zookeeper"
 # application config
 application_config:
     organization : "ikurento.com"
-    name  : "Pusher"
+    name  : "BDTService"
     module : "dubbogo user-info client"
     version : "0.0.1"
     owner : "ZX"

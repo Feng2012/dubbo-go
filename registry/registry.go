@@ -52,7 +52,7 @@ type ServiceConfigIf interface {
 }
 
 type ServiceConfig struct {
-	Protocol string `required:"true" ,default:"dubbo"  yaml:"protocol"  json:"protocol,omitempty"`
+	Protocol string `required:"true",default:"dubbo"  yaml:"protocol"  json:"protocol,omitempty"`
 	Service  string `required:"true"  yaml:"service"  json:"service,omitempty"`
 	Group    string `yaml:"group" json:"group,omitempty"`
 	Version  string `yaml:"version" json:"version,omitempty"`
@@ -87,9 +87,9 @@ func (c ServiceConfig) ServiceEqual(url *ServiceURL) bool {
 }
 
 type ServerConfig struct {
-	Protocol string `required:"true",default:"dubbo"` // codec string, jsonrpc  etc
-	IP       string
-	Port     int `required:"true"`
+	Protocol string `required:"true",default:"dubbo" yaml:"protocol" json:"protocol,omitempty"` // codec string, jsonrpc  etc
+	IP       string `yaml:"ip" json:"ip,omitempty"`
+	Port     int    `required:"true" yaml:"port" json:"port,omitempty"`
 }
 
 func (c *ServerConfig) Address() string {

@@ -123,7 +123,7 @@ func (r *ZkProviderRegistry) validateZookeeperClient() error {
 	if r.client == nil {
 		r.client, err = newZookeeperClient(ProviderRegistryZkClient, r.Address, r.RegistryConfig.Timeout)
 		if err != nil {
-			log.Warn("newZookeeperClient(name{%r}, zk addresss{%v}, timeout{%d}) = error{%#v}",
+			log.Warn("newZookeeperClient(name{%s}, zk addresss{%v}, timeout{%d}) = error{%#v}",
 				ProviderRegistryZkClient, r.Address, r.Timeout, jerrors.ErrorStack(err))
 		}
 	}
@@ -151,7 +151,7 @@ func (r *ZkProviderRegistry) Register(c interface{}) error {
 	_, ok = r.services[conf.String()]
 	r.Unlock()
 	if ok {
-		return jerrors.Errorf("Service{%r} has been registered", conf.String())
+		return jerrors.Errorf("Service{%s} has been registered", conf.String())
 	}
 
 	err = r.register(&conf)
@@ -202,7 +202,7 @@ func (r *ZkProviderRegistry) register(conf *ProviderServiceConfig) error {
 	)
 
 	if conf.ServiceConfig.Service == "" || conf.Methods == "" {
-		return jerrors.Errorf("conf{Service:%r, Methods:%r}", conf.ServiceConfig.Service, conf.Methods)
+		return jerrors.Errorf("conf{Service:%s, Methods:%s}", conf.ServiceConfig.Service, conf.Methods)
 	}
 
 	err = r.validateZookeeperClient()
@@ -210,13 +210,13 @@ func (r *ZkProviderRegistry) register(conf *ProviderServiceConfig) error {
 		return jerrors.Trace(err)
 	}
 	// 先创建服务下面的provider node
-	dubboPath = fmt.Sprintf("/dubbo/%r/%r", conf.Service, DubboNodes[PROVIDER])
+	dubboPath = fmt.Sprintf("/dubbo/%s/%s", conf.Service, DubboNodes[PROVIDER])
 	r.Lock()
 	err = r.client.Create(dubboPath)
 	r.Unlock()
 	if err != nil {
-		log.Error("zkClient.create(path{%r}) = error{%#v}", dubboPath, jerrors.ErrorStack(err))
-		return jerrors.Annotatef(err, "zkclient.Create(path:%r)", dubboPath)
+		log.Error("zkClient.create(path{%s}) = error{%#v}", dubboPath, jerrors.ErrorStack(err))
+		return jerrors.Annotatef(err, "zkclient.Create(path:%s)", dubboPath)
 	}
 
 	params = url.Values{}
@@ -260,15 +260,15 @@ func (r *ZkProviderRegistry) register(conf *ProviderServiceConfig) error {
 		urlPath += strconv.Itoa(r.zkPath[urlPath])
 	}
 	r.zkPath[urlPath]++
-	rawURL = fmt.Sprintf("%r://%r/%r?%r", conf.Protocol, conf.Path, urlPath, params.Encode())
+	rawURL = fmt.Sprintf("%s://%s/%s?%s", conf.Protocol, conf.Path, urlPath, params.Encode())
 	encodedURL = url.QueryEscape(rawURL)
 
 	// 把自己注册service providers
-	dubboPath = fmt.Sprintf("/dubbo/%r/%r", conf.Service, (DubboType(PROVIDER)).String())
+	dubboPath = fmt.Sprintf("/dubbo/%s/%s", conf.Service, (DubboType(PROVIDER)).String())
 	err = r.registerTempZookeeperNode(dubboPath, encodedURL)
-	log.Debug("provider path:%r, url:%r", dubboPath, rawURL)
+	log.Debug("provider path:%s, url:%s", dubboPath, rawURL)
 	if err != nil {
-		return jerrors.Annotatef(err, "registerTempZookeeperNode(path:%r, url:%r)", dubboPath, rawURL)
+		return jerrors.Annotatef(err, "registerTempZookeeperNode(path:%s, url:%s)", dubboPath, rawURL)
 	}
 
 	return nil
@@ -307,7 +307,7 @@ LOOP:
 				case <-time.After(time.Duration(1e9 * failTimes * REGISTRY_CONN_DELAY)): // 防止疯狂重连zk
 				}
 				err = r.validateZookeeperClient()
-				log.Info("ZkProviderRegistry.validateZookeeperClient(zkAddr{%r}) = error{%#v}",
+				log.Info("ZkProviderRegistry.validateZookeeperClient(zkAddr{%s}) = error{%#v}",
 					r.client.zkAddrs, jerrors.ErrorStack(err))
 				if err == nil {
 					// copy r.services

@@ -495,7 +495,7 @@ func (r *ZkConsumerRegistry) Filter(s ServiceConfigIf, reqID int64) (*ServiceURL
 	r.listenerLock.Lock()
 	defer r.listenerLock.Unlock()
 	if err != nil {
-		log.Error("Registry.get(conf:%+v) = {err:%r, svcs:%+v}",
+		log.Error("Registry.get(conf:%+v) = {err:%s, svcs:%+v}",
 			serviceConf, jerrors.ErrorStack(err), svcs)
 		if sok && len(svcArr.arr) > 0 {
 			log.Error("serviceArray{%v} timeout, can not get new, use old instead", svcArr)
